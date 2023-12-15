@@ -1,0 +1,38 @@
+server:
+  port: 8080
+spring:
+  boot:
+    admin:
+      discovery:
+        enabled: true
+        # In case the base path for the actuators are something else.
+        # Note that all services must follow this pattern or they will be flagged as DOWN.
+#        converter:
+#          management-context-path: /prefix/actuator
+      ui:
+        # You need to set this if SBA is being routed through an ingress controller like APISIX and, maybe, nginx (but not confirmed).
+        # Yes, the port IS needed!
+#        public-url: https://your-domain.como:443/
+        enable-toasts: true
+
+    kubernetes:
+      discovery:
+        enabled: true
+        # Aside from
+        primary-port-name: actuators
+        namespaces:
+          - ns-01
+        service-labels:
+          # A service should have this label.
+          # With this, you don't need SBA Client to be installed in each service that needs monitoring.
+          spring-boot: true
+# In case you want Spring Security
+#      instance-auth:
+#        enabled: true
+#      client:
+#        username: ${spring.security.user.name}
+#        password: ${spring.security.user.password}
+#  security:
+#    user:
+#      name: "user"
+#      password: "pass"

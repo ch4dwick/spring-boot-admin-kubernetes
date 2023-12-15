@@ -1,0 +1,129 @@
+# Reader is all you need
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sba-reader-binding
+  namespace: ns-01
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: reader
+subjects:
+  - kind: ServiceAccount
+    name: MyServiceAccount
+    namespace: ns-01
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-boot-admin
+  namespace: ns-01
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-boot-admin
+  template:
+    metadata:
+      labels:
+        app: spring-boot-admin
+    spec:
+      serviceAccountName: MyServiceAccount
+      containers:
+        - name: spring-boot-admin
+          # We used ECR
+          image: xxxxx.dkr.ecr.ap-southeast-1.amazonaws.com/spring-boot-admin:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: management
+          resources:
+            # requests:
+            #   memory: "250Mi"
+            #   cpu: "250m"
+            #   ephemeral-storage: "50Mi"
+            limits:
+              # memory: "1Gi"
+              # cpu: "200m"
+              ephemeral-storage: "100Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-boot-admin
+  namespace: ns-01
+spec:
+  selector:
+    app: spring-boot-admin
+  # We used an ingress controller for this, so we didn't need it.
+  # type: NodePort
+  ports:
+    # Monitor self.
+    # Must match the primary-port-name section in application.yml
+    - name: actuators
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-service
+  namespace: ns-01
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-service
+  template:
+    metadata:
+      labels:
+        app: test-service
+    spec:
+      containers:
+        - name: test-service
+          image: yourrepo/yourimage:yourtag
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 8081
+              name: actuators
+          resources:
+            # requests:
+            #   memory: "250Mi"
+            #   cpu: "250m"
+            #   ephemeral-storage: "50Mi"
+            limits:
+              # memory: "1Gi"
+              # cpu: "200m"
+              ephemeral-storage: "100Mi"
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "dev"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-service
+  namespace: ns-01
+  labels:
+    # This will match the spring.boot.kubernetes.discovery.service-labels condition.
+    # With this, you don't need SBA Client to be installed in each service that needs monitoring.
+    # Just make sure the actuators label below has working actuators, /health at minimum.
+    spring-boot: "true"
+spec:
+  selector:
+    app: test-service
+  # type: NodePort
+  ports:
+    # If primary-port-name is not set, this is the default name SBA looks for.
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+    # Must match the primary-port-name section in application.yml
+    - name: actuators
+      protocol: TCP
+      port: 8081
+      targetPort: 8081
