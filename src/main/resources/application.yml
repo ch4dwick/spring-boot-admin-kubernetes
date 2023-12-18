@@ -12,13 +12,13 @@ spring:
       ui:
         # You need to set this if SBA is being routed through an ingress controller like APISIX and, maybe, nginx (but not confirmed).
         # Yes, the port IS needed!
-#        public-url: https://your-domain.como:443/
+#        public-url: https://your-domain.com:443/
         enable-toasts: true
 
     kubernetes:
       discovery:
         enabled: true
-        # Aside from
+        # This should match the port name in the K8S service manifest that SBA will monitor.
         primary-port-name: actuators
         namespaces:
           - ns-01
